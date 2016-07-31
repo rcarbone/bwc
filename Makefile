@@ -48,7 +48,8 @@ DEPS      = $(patsubst %.c,%.M,   ${CSRCS})
 DEPS     += $(patsubst %.cpp,%.M, ${C++SRCS})
 
 # C compiler and flags
-DEFINES   = -DUSE_DLMALLOC -DREAD_WHOLE_FILE
+# DEFINES   = -DUSE_DLMALLOC  - Do not use due to abort in std:map
+DEFINES   = -DREAD_WHOLE_FILE
 INCLUDES  = -I. ${INCLUDE}
 CC        = gcc
 C++       = g++

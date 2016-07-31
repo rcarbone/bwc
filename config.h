@@ -1,0 +1,2 @@
+#define USE_DLMALLOC 1
+#define READ_WHOLE_FILE 1

@@ -1,0 +1,136 @@
+#include "precomp.h"
+
+template <class Key, class Value, class Traits> class ChainedHashTable
+{
+public:
+    struct Bucket
+    {
+        Key key;
+        Value value;
+        Bucket *next;
+
+        Bucket() : key(), value(), next(NULL) {}
+    };
+
+    uint m_tableSize;
+    Bucket *m_table;
+    uint m_blockSize;
+    uint m_blockPos;
+    uint m_numKeys;
+    vector<Bucket *> m_blocks;
+
+    ChainedHashTable(uint tableSize, uint blockSize = 256)
+    {
+        assert((tableSize & (tableSize - 1)) == 0);	// Must be a power of two.
+        m_table = new Bucket[tableSize];
+        m_tableSize = tableSize;
+        m_blockPos = m_blockSize = blockSize;
+        m_numKeys = 0;
+    }
+
+    ~ChainedHashTable()
+    {
+        delete[] m_table;
+        for (uint i = 0; i < m_blocks.size(); i++)
+        {
+            delete[] m_blocks[i];
+        }
+    }
+
+    Value &operator[](const Key &key)
+    {
+        uint hash = Traits::hash(key) & (m_tableSize - 1);
+        Bucket *firstBucket = m_table + hash;
+        Bucket *b = firstBucket;
+        do
+        {
+            if (b->key == key)
+                return b->value;	// Found existing bucket
+            b = b->next;
+        }
+        while (b);
+        // Add it
+        m_numKeys++;
+        if (Traits::isEmpty(firstBucket->key))
+        {
+            firstBucket->key = key;	// Use bucket in table
+            return firstBucket->value;
+        }
+        // Allocate a new bucket
+        if (m_blockPos >= m_blockSize)
+        {
+            Bucket *block = new Bucket[m_blockSize];
+            m_blocks.push_back(block);
+            m_blockPos = 0;
+        }
+        b = m_blocks.back() + m_blockPos;
+        m_blockPos++;
+        b->key = key;
+        b->next = firstBucket->next;
+        firstBucket->next = b;
+        return b->value;
+    }
+};
+
+class ChainedHashTableTester : public BaseTester
+{
+private:
+	class Traits
+	{
+	public:
+		static uint hash(const string &key)
+		{
+			uint hash = 2166136261;
+			for (const char *s = key.c_str(); *s; s++)
+		        hash = (16777619 * hash) ^ (*s);
+			return hash;
+		};
+
+		static bool isEmpty(const string &key)
+		{
+			return key.empty();
+		}
+	};
+
+	ChainedHashTable<string, int, Traits> m_wordCount;
+
+public:
+	ChainedHashTableTester(uint tableSize) : m_wordCount(tableSize)
+	{
+	}
+
+	void readWords(WordReader &reader)
+	{
+		while (const char *word = reader.getWord())
+		{
+			m_wordCount[word] += 1;
+		}
+	}
+
+	void getWords(vector<pair<int, string> > &wordList)
+	{
+		typedef ChainedHashTable<string, int, Traits>::Bucket Bucket;
+		wordList.reserve(m_wordCount.m_numKeys);
+		uint i;
+		for (i = 0; i < m_wordCount.m_tableSize; i++)
+		{
+			Bucket *b = m_wordCount.m_table + i;
+			if (!b->key.empty())
+				wordList.push_back(pair<int, string>(b->value, b->key.c_str()));
+		}
+		for (i = 0; i < m_wordCount.m_blocks.size(); i++)
+		{
+			Bucket *block = m_wordCount.m_blocks[i];
+			for (uint j = 0; j < m_wordCount.m_blockSize; j++)
+			{
+				if (!block[j].key.empty())
+					wordList.push_back(pair<int, string>(block[j].value, block[j].key.c_str()));
+			}
+		}
+	}
+};
+
+BaseTester *CreateChainedHashTableTester(uint param)
+{
+	return new ChainedHashTableTester(param);
+}

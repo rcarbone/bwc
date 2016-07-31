@@ -1,0 +1,57 @@
+#include "python2.7/Python.h"
+
+#include "precomp.h"
+
+
+class PythonDictionaryTester : public BaseTester
+{
+private:
+
+  PyObject * m_pyDict;
+
+public:
+
+  PythonDictionaryTester ()
+  {
+    m_pyDict = PyDict_New ();
+  }
+
+  ~PythonDictionaryTester ()
+  {
+    Py_XDECREF (m_pyDict);
+  }
+
+  void readWords (WordReader & reader)
+  {
+    while (const char * word = reader . getWord ())
+      {
+	PyObject * pyOldValue = PyDict_GetItemString (m_pyDict, word);
+	long newValue = pyOldValue ? PyInt_AS_LONG (pyOldValue) + 1 : 1;
+	PyObject * pyNewValue = PyInt_FromLong (newValue);
+	PyDict_SetItemString (m_pyDict, word, pyNewValue);
+	Py_DECREF (pyNewValue);
+      }
+  }
+
+  void getWords (vector<pair<int, string>> & wordList)
+  {
+    PyObject * pyIter = PyObject_CallMethod (m_pyDict, (char *) "iteritems", NULL);
+    PyObject * pyItem;
+    while (pyItem = PyIter_Next (pyIter))
+      {
+	const char * key = PyString_AsString (PyTuple_GetItem (pyItem, 0));
+	long value = PyInt_AsLong (PyTuple_GetItem (pyItem, 1));
+
+	wordList . push_back (pair<int, string> (value, key));
+
+	Py_DECREF (pyItem);
+      }
+    Py_DECREF (pyIter);
+  }
+};
+
+
+BaseTester * CreatePythonDictionaryTester (uint param)
+{
+  return new PythonDictionaryTester ();
+}

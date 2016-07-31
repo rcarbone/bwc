@@ -1,0 +1,67 @@
+#pragma once
+
+class WordReader
+{
+private:
+#if READ_WHOLE_FILE
+	const char *m_rdPos;
+	const char *m_endPos;
+#else
+	istream &m_inFile;
+#endif
+	static const int MaxWordLen = 255;
+	char m_word[MaxWordLen + 1];
+
+public:
+#if READ_WHOLE_FILE
+	WordReader(vector<char> &buffer)
+	{
+		m_rdPos = &buffer[0];
+		m_endPos = m_rdPos + buffer.size();
+	}
+#else
+	WordReader(istream &inFile) : m_inFile(inFile)
+	{
+		inFile.clear();
+		inFile.seekg(0, ios::beg);
+	}
+#endif
+
+	const char *getWord()
+	{
+		int wordLen = 0;
+#if READ_WHOLE_FILE
+		while (m_rdPos < m_endPos)
+		{
+			char c = *m_rdPos++;
+#else
+		for (;;)
+		{
+			char c = m_inFile.get();
+			if (m_inFile.eof())
+				break;
+#endif
+			int lower = c | 0x20;	// lowercase
+			if (lower >= 'a' ? lower <= 'z' : (lower >= '0' && lower <= '9'))
+			{
+				if (wordLen < MaxWordLen)
+					m_word[wordLen++] = c;
+			}
+			else
+			{
+				if (wordLen > 0)
+				{
+					m_word[wordLen] = 0;
+					return m_word;
+				}
+			}
+		}
+		if (wordLen > 0)
+		{
+			m_word[wordLen] = 0;
+			return m_word;
+		}
+		return NULL;
+	}
+};
+

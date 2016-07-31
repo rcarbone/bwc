@@ -1,0 +1,171 @@
+#include "precomp.h"
+#include <windows.h>		// Just for QueryPerformance functions - only thing needed to port
+#include <vector>
+#include <algorithm>
+#include <fstream>
+#include <map>
+#include <math.h>
+
+
+#if READ_WHOLE_FILE
+bool ReadWholeFile(const char *filename, vector<char> &buffer)
+{
+	ifstream inFile(filename);
+	if (inFile.fail())
+		return false;
+
+	inFile.seekg(0, ios::end);
+	uint fileSize = inFile.tellg();
+	inFile.seekg(0, ios::beg);
+
+	buffer.resize(fileSize);
+	inFile.read(&buffer[0], fileSize);
+	return true;
+}
+#endif
+
+BaseTester *CreateStdMapTester(uint param);
+BaseTester *CreateStdExtHashMapTester(uint param);
+BaseTester *CreateJudyLHashTableTester(uint param);
+BaseTester *CreateJudySLArrayTester(uint param);
+BaseTester *CreateChainedHashTableTester(uint param);
+BaseTester *CreateStringHashTableTester(uint param);
+BaseTester *CreateOpenHashTableTester(uint param);		// Param is % threshold before resizing
+BaseTester *CreatePythonDictionaryTester(uint param);
+BaseTester *CreateStdMapHashTableTester(uint param);
+BaseTester *CreateStdExtHashMapHashTableTester(uint param);
+BaseTester *CreateGCCHashTableTester(uint param);
+BaseTester *CreateGoogleDenseHashMapTester(uint param);
+BaseTester *CreateGoogleSparseHashMapTester(uint param);
+
+struct TestEntry
+{
+	BaseTester *(*factoryFunc)(uint param);
+	uint param;
+	const char *name;
+	double sumOfTimes;
+	double sumOfSquareTimes;
+};
+
+TestEntry TestEntries[] =
+{
+	{ CreateGoogleDenseHashMapTester, 32000, "Google dense hash", 0, 0 },
+	{ CreateGoogleSparseHashMapTester, 32000, "Google sparse hash", 0, 0 },
+	{ CreateGCCHashTableTester, 0, "GCC hash table", 0, 0 },
+	{ CreateStdExtHashMapTester, 0, "stdext::hash_map", 0, 0 },
+	{ CreateStdMapTester, 0, "std::map", 0, 0 },
+	//{ CreateStdMapHashTableTester, 0, "std::map hash table", 0, 0 },
+	//{ CreateStdExtHashMapHashTableTester, 0, "stdext::hash_map hash table", 0, 0 },
+	//{ CreateOpenHashTableTester, 33, "OpenHashTable 33%", 0, 0 },
+	//{ CreateOpenHashTableTester, 50, "OpenHashTable 50%", 0, 0 },
+	{ CreateOpenHashTableTester, 66, "OpenHashTable", 0, 0 },
+	{ CreatePythonDictionaryTester, 0, "Python dictionary", 0, 0 },
+	{ CreateJudyLHashTableTester, 0, "JudyL hash table", 0, 0 },
+	{ CreateJudySLArrayTester, 0, "JudySL Array", 0, 0 },
+	//{ CreateChainedHashTableTester, 4096, "ChainedHashTable 4096", 0, 0 },
+	//{ CreateChainedHashTableTester, 8192, "ChainedHashTable 8192", 0, 0 },
+	//{ CreateChainedHashTableTester, 16384, "ChainedHashTable 16384", 0, 0 },
+	//{ CreateChainedHashTableTester, 32768, "ChainedHashTable 32768", 0, 0 },
+	{ CreateChainedHashTableTester, 65536, "ChainedHashTable", 0, 0 },
+	{ CreateStringHashTableTester, 65536, "StringHashTable", 0, 0 },
+	//{ CreateChainedHashTableTester, 131072, "ChainedHashTable 131072", 0, 0 },
+	//{ CreateChainedHashTableTester, 262144, "ChainedHashTable 262144", 0, 0 },
+};
+
+int main(int argc, const char *argv[])
+{
+	if (argc < 2)
+	{
+		puts("Please specify the input filename on the command line.");
+		return 1;
+	}
+
+#if READ_WHOLE_FILE
+	vector<char> buffer;
+	if (!ReadWholeFile(argv[1], buffer))
+#else
+	ifstream inFile(argv[1]);
+	if (inFile.fail())
+#endif
+	{
+		printf("Could not open '%s'.\n", argv[1]);
+		return 1;
+	}
+
+	Py_Initialize();		// For the Python tests
+
+	for (int runs = 0; runs < NUMBER_OF_ITERATIONS; runs++)
+	{
+		fprintf(stderr, "Run #%d of %d...\n", runs + 1, NUMBER_OF_ITERATIONS);
+
+#if VALIDATE_TESTS
+		vector<pair<int, string> > baseWordList;
+#endif
+
+		for (uint i = 0; i < sizeof(TestEntries) / sizeof(TestEntries[0]); i++)
+		{
+			TestEntry *entry = TestEntries + i;
+#if READ_WHOLE_FILE
+			WordReader reader(buffer);
+#else
+			WordReader reader(inFile);
+#endif
+			BaseTester *tester = entry->factoryFunc(entry->param);
+
+			LARGE_INTEGER start, stop, freq;
+			QueryPerformanceCounter(&start);
+			tester->readWords(reader);
+			QueryPerformanceCounter(&stop);
+			QueryPerformanceFrequency(&freq);
+
+			double timeSpent = (double) (stop.QuadPart - start.QuadPart) / freq.QuadPart;
+			fprintf(stderr, "Completed \"%s\" in %.3f seconds\n", entry->name, timeSpent);
+			entry->sumOfTimes += timeSpent;
+			entry->sumOfSquareTimes += timeSpent * timeSpent;
+
+#if PRINT_STRINGS
+			{
+				vector<pair<int, string> > wordList;
+				tester->getWords(wordList);
+				sort(wordList.begin(), wordList.end());
+				for (uint i = 0; i < 5 && i < wordList.size(); i++)
+				{
+					const pair<int, string> &word = wordList[wordList.size() - 1 - i];
+					printf("%s: %d\n", word.second.c_str(), word.first);
+				}
+			}
+#endif
+
+#if VALIDATE_TESTS
+			{
+				vector<pair<int, string> > wordList;
+				tester->getWords(wordList);
+				sort(wordList.begin(), wordList.end());
+				if (baseWordList.size() == 0)
+				{
+					baseWordList = wordList;
+				}
+				else
+				{
+					assert(baseWordList == wordList);
+				}
+			}
+#endif
+
+			delete tester;
+		}
+	}
+
+	printf("Average of %d runs:\n", NUMBER_OF_ITERATIONS);
+	puts("name\tavg(ms)\tstddev(ms)");
+	for (uint i = 0; i < sizeof(TestEntries) / sizeof(TestEntries[0]); i++)
+	{
+		TestEntry *entry = TestEntries + i;
+		double average = entry->sumOfTimes / NUMBER_OF_ITERATIONS;
+		double stdDev = sqrt(entry->sumOfSquareTimes / NUMBER_OF_ITERATIONS - average * average);
+		printf("%s\t%3.0f\t%3.2f\n", entry->name, average * 1000, stdDev * 1000);
+	}
+
+	Py_Finalize();		// For the Python tests
+	return 0;
+}

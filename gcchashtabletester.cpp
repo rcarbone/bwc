@@ -8,21 +8,23 @@
 class GCCHashTableTester : public BaseTester
 {
 private:
+
   struct Node
   {
     char * str;
     uint count;
 
-    Node(const char *s) : count() { str = (char *) malloc(strlen(s) + 1); strcpy(str, s); }
-    ~Node() { free(str); }
-    static int htab_eq (const void *entry, const void *element) { return strcmp(((Node *) entry)->str, (const char *) element) == 0; }
-    static void htab_del (void *key) { delete (Node *) key; }
+    Node (const char * s) : count() { str = (char *) malloc (strlen (s) + 1); strcpy (str, s); }
+    ~Node () { free (str); }
+
+    static int htab_eq (const void * entry, const void * element) { return strcmp (((Node *) entry) -> str, (const char *) element) == 0; }
+    static void htab_del (void * key) { delete (Node *) key; }
   };
 
   static hashval_t fnv1Hash (const char * key)
   {
     uint hash = 2166136261;
-    for (const char * s = key; *s; s ++)
+    for (const char * s = key; * s; s ++)
       hash = (16777619 * hash) ^ (* s);
     return hash;
   }
@@ -48,7 +50,7 @@ public:
 
   void readWords (WordReader &reader)
   {
-    while (const char * word = reader.getWord())
+    while (const char * word = reader . getWord())
       {
 	hashval_t hash = fnv1Hash (word);
 	void ** slot = htab_find_slot_with_hash (m_hTab, word, hash, INSERT);
@@ -60,17 +62,17 @@ public:
       }
   }
 
-  static int htab_trav (void **slot, void *param)
+  static int htab_trav (void ** slot, void * param)
   {
-    Node *node = (Node *) *slot;
-    vector<pair<int, string> > &wordList = *(vector<pair<int, string> > *) param;
-    wordList.push_back(pair<int, string>(node->count, node->str));
+    Node * node = (Node *) * slot;
+    vector<pair<int, string>> & wordList = * (vector<pair<int, string>> *) param;
+    wordList . push_back (pair<int, string> (node -> count, node -> str));
     return 1;
   }
 
-  void getWords(vector<pair<int, string> > &wordList)
+  void getWords (vector<pair<int, string>> & wordList)
   {
-    wordList . reserve(htab_elements (m_hTab));
+    wordList . reserve (htab_elements (m_hTab));
     htab_traverse_noresize (m_hTab, htab_trav, & wordList);
   }
 };

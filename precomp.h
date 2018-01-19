@@ -6,7 +6,6 @@
 
 using namespace std;
 
-
 #include "wordreader.h"
 
 
@@ -28,11 +27,12 @@ extern "C"
 {
   void * dlmalloc (size_t);
   void * dlcalloc (size_t, size_t);
-  void  dlfree (void *);
+  void dlfree (void *);
 }
+
 #define malloc dlmalloc
 #define calloc dlcalloc
-#define free dlfree
+#define free   dlfree
 
 inline void * operator new (size_t cb)    { return dlmalloc (cb); }
 inline void * operator new [] (size_t cb) { return dlmalloc (cb); }
@@ -47,5 +47,5 @@ class BaseTester
  public:
   virtual ~BaseTester () {}
   virtual void readWords (WordReader & reader) = 0;
-  virtual void getWords (vector<pair<int, string>> & wordList) = 0;
+  virtual void getWords (vector <pair <int, string> > & wordList) = 0;
 };

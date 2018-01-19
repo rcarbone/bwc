@@ -39,6 +39,8 @@ BaseTester * CreatePythonDictionaryTester (uint param);
 BaseTester * CreateJudyLHashTableTester (uint param);
 BaseTester * CreateJudySLArrayTester (uint param);
 
+BaseTester * Create_Khash_HashTableTester (uint param);
+
 
 /* The table of implementations under test */
 TestEntry TestEntries [] =
@@ -86,10 +88,13 @@ TestEntry TestEntries [] =
   /* Judy */
   { CreateJudyLHashTableTester,         0,      "JudyL-hash-table",            0, 0 },
   { CreateJudySLArrayTester,            0,      "JudySL-Array",                0, 0 },
+
+  /* Klib */
+  { Create_Khash_HashTableTester,       0,      "khash",                       0, 0 },
 };
 
 
-bool ReadWholeFile (const char * filename, vector<char> &buffer)
+bool ReadWholeFile (const char * filename, vector <char> & buffer)
 {
   ifstream inFile (filename);
   if (inFile . fail ())
@@ -107,7 +112,7 @@ bool ReadWholeFile (const char * filename, vector<char> &buffer)
 
 int main (int argc, const char * argv [])
 {
-  vector<char> buffer;
+  vector <char> buffer;
 
   if (argc < 2)
     {
@@ -129,7 +134,7 @@ int main (int argc, const char * argv [])
   for (int runs = 0; runs < NUMBER_OF_ITERATIONS; runs ++)
     {
 #if VALIDATE_TESTS
-      vector<pair<int, string> > baseWordList;
+      vector <pair <int, string> > baseWordList;
 #endif
 
       printf ("Run #%d of %d...\n", runs + 1, NUMBER_OF_ITERATIONS);
@@ -160,20 +165,20 @@ int main (int argc, const char * argv [])
 
 #if PRINT_STRINGS
 	  {
-	    vector<pair<int, string> > wordList;
+	    vector <pair <int, string> > wordList;
 	    tester -> getWords (wordList);
 	    sort (wordList . begin (), wordList . end ());
 	    for (uint i = 0; i < 5 && i < wordList.size (); i ++)
 	      {
-		const pair<int, string> & word = wordList [wordList . size () - 1 - i];
-		printf ("%s: %d\n", word . second . c_str(), word . first);
+		const pair <int, string> & word = wordList [wordList . size () - 1 - i];
+		printf ("%s: %d\n", word . second . c_str (), word . first);
 	      }
 	  }
 #endif
 
 #if VALIDATE_TESTS
 	  {
-	    vector<pair<int, string> > wordList;
+	    vector <pair <int, string> > wordList;
 	    tester -> getWords (wordList);
 	    sort (wordList . begin (), wordList . end ());
 	    if (baseWordList . size () == 0)

@@ -15,7 +15,6 @@
 # Warning: the following files do not compile yet
 #   stdexthashmaphashtabletester.cpp
 #   stdexthashmaptester.cpp
-#   precomp.cpp
 
 # The name of the game
 TARGET    = wordcount
@@ -23,6 +22,7 @@ TARGET    = wordcount
 # C++ source files
 CSRCS     = dlmalloc.c
 C++SRCS   = wordcount.cpp                 \
+            khash.cpp                     \
             chainedhashtabletester.cpp    \
             gcchashtabletester.cpp        \
             googledensehashmaptester.cpp  \
